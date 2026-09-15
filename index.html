@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="color-scheme" content="dark">
+<title>TERMINAL DEFENDER 2.0</title>
+<style>/* inline critical: hide body flash before css loads */
+html,body{background:#02060a;margin:0;height:100%;overflow:hidden}
+</style>
+<link rel="stylesheet" href="css/styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%2302060a'/><text x='16' y='23' font-size='18' text-anchor='middle' fill='%2300ff9c' font-family='monospace'>&gt;_</text></svg>">
+</head>
+<body>
+<div id="app">
+  <canvas id="game"></canvas>
+
+  <!-- ================= IN-GAME HUD ================= -->
+  <div id="hud" class="hidden" aria-live="off">
+    <header id="hud-top">
+      <div class="hud-box" id="hud-wave">
+        <label>WAVE</label>
+        <span id="wave-val">--/--</span>
+        <div class="mini-bar" id="threat-bar"><i></i></div>
+        <label class="sub">THREAT LEVEL</label>
+      </div>
+      <div class="hud-box hud-center" id="hud-score">
+        <label>SCORE</label>
+        <span id="score-val">0</span>
+        <span class="sub"><span id="acc-val">ACC --%</span> · <span id="rt-val">RT --s</span></span>
+      </div>
+      <div class="hud-box hud-right" id="hud-high">
+        <label>HIGH SCORE</label>
+        <span id="high-val">0</span>
+        <span class="sub" id="hud-status">SYSTEM NOMINAL</span>
+      </div>
+    </header>
+
+    <div id="bossbar" class="hidden">
+      <div class="boss-deco">════════════════════════════</div>
+      <div class="boss-name" id="boss-name">???</div>
+      <div class="boss-hp"><i id="boss-hp-fill"></i></div>
+      <div class="boss-deco">════════════════════════════</div>
+    </div>
+
+    <div id="target-panel">
+      <label>TARGET</label>
+      <div id="target-expr">STANDBY</div>
+      <div id="target-hint" class="sub"></div>
+    </div>
+
+    <div id="event-banner" class="hidden"><span id="event-banner-text"></span></div>
+    <div id="event-timers"></div>
+
+    <footer id="hud-bottom">
+      <div class="hud-box" id="hud-hp">
+        <label>HP</label>
+        <div class="hp-bar" id="hp-bar"><i id="hp-fill"></i><em id="hp-ghost"></em></div>
+        <span id="hp-val">100/100</span>
+      </div>
+      <div class="hud-box hud-center" id="hud-input">
+        <label>ANSWER</label>
+        <span id="input-val">&gt;_</span>
+        <span class="sub" id="input-mode">KEYS 0-9 · ENTER TO FIRE</span>
+      </div>
+      <div class="hud-box hud-right" id="hud-combo">
+        <label>COMBO</label>
+        <span id="combo-val">×0</span>
+        <span class="sub" id="combo-mult">MULT ×1</span>
+      </div>
+    </footer>
+
+    <div id="numpad" class="hidden">
+      <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button data-k="BS" class="np-fn">⌫</button>
+      <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button><button data-k="C" class="np-fn">AC</button>
+      <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="EN" class="np-fire">↵</button>
+      <button data-k="0" class="np-zero">0</button><button data-k="TAB" class="np-fn np-tab">TAB</button>
+    </div>
+
+    <div id="toasts"></div>
+    <div id="vignette"></div>
+    <div id="damage-flash"></div>
+    <div id="lowhp-overlay"></div>
+  </div>
+
+  <!-- ================= FULL-SCREEN SCREENS ================= -->
+  <div id="screens">
+    <section id="screen-boot" class="screen"><div class="term" id="boot-text"></div></section>
+
+    <section id="screen-menu" class="screen hidden">
+      <canvas id="menu-fx"></canvas>
+      <div class="menu-wrap">
+        <div class="title-glitch" data-text="TERMINAL">
+          <h1 class="title-line">TERMINAL</h1>
+        </div>
+        <div class="title-glitch" data-text="DEFENDER 2.0">
+          <h1 class="title-line title-2">DEFENDER&nbsp;2.0</h1>
+        </div>
+        <div class="subtitle">MATHEMATICAL DEFENSE PROTOCOL</div>
+        <nav class="menu-nav" id="menu-nav">
+          <button data-act="start">START GAME</button>
+          <button data-act="tutorial">TUTORIAL</button>
+          <button data-act="settings">SETTINGS</button>
+          <button data-act="leaderboard">LEADERBOARD</button>
+          <button data-act="achievements">ACHIEVEMENTS</button>
+          <button data-act="credits">CREDITS</button>
+        </nav>
+        <div class="menu-stats" id="menu-stats"></div>
+        <div class="menu-hint sub">ENTER=SELECT · ↑↓=NAVIGATE</div>
+      </div>
+    </section>
+
+    <section id="screen-settings" class="screen hidden"><div class="panel" id="settings-panel"></div></section>
+    <section id="screen-leaderboard" class="screen hidden"><div class="panel" id="leaderboard-panel"></div></section>
+    <section id="screen-achievements" class="screen hidden"><div class="panel" id="achievements-panel"></div></section>
+    <section id="screen-credits" class="screen hidden"><div class="panel" id="credits-panel"></div></section>
+
+    <section id="screen-tutorial" class="screen hidden"><div id="tutorial-layer"></div></section>
+
+    <section id="screen-countdown" class="screen hidden"><div class="countdown" id="countdown-text"></div></section>
+
+    <section id="screen-waveintro" class="screen hidden">
+      <div class="wave-intro">
+        <div class="wi-pre" id="wi-pre">INITIALIZING DEFENSE SYSTEM...</div>
+        <div class="wi-wave" id="wi-wave">WAVE 01</div>
+        <div class="wi-name" id="wi-name"></div>
+        <div class="wi-threat-label">MATHEMATICAL THREAT LEVEL</div>
+        <div class="wi-threat" id="wi-threat"><i></i></div>
+        <div class="wi-post" id="wi-post">INCOMING HOSTILES</div>
+      </div>
+    </section>
+
+    <section id="screen-pause" class="screen hidden">
+      <div class="panel small">
+        <h2>// PAUSED</h2>
+        <div class="pause-grid">
+          <button data-act="resume">RESUME</button>
+          <button data-act="restart">RESTART WAVE</button>
+          <button data-act="settings-pause">SETTINGS</button>
+          <button data-act="quit">ABORT TO MENU</button>
+        </div>
+        <div class="sub pause-hint">ESC = RESUME</div>
+      </div>
+    </section>
+
+    <section id="screen-waveclear" class="screen hidden">
+      <div class="wave-clear">
+        <div class="wc-head">WAVE CLEAR</div>
+        <div class="wc-stats" id="waveclear-stats"></div>
+        <div class="wc-next sub" id="waveclear-next"></div>
+      </div>
+    </section>
+
+    <section id="screen-gameover" class="screen hidden">
+      <div class="panel go-panel">
+        <div class="go-rule">════════════════════════════</div>
+        <h1 class="go-title">SYSTEM FAILURE</h1>
+        <div class="go-rule">════════════════════════════</div>
+        <div class="go-stats" id="gameover-stats"></div>
+        <div class="go-new hidden" id="gameover-newrecord">▲ NEW HIGH SCORE ▲</div>
+        <div class="go-actions">
+          <button data-act="retry">TRY AGAIN</button>
+          <button data-act="menu">MAIN MENU</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="screen-victory" class="screen hidden">
+      <div class="panel go-panel victory">
+        <div class="go-rule">════════════════════════════</div>
+        <h1 class="go-title vic-title">TERMINAL OVERLORD<br>DEFEATED</h1>
+        <div class="go-rule">════════════════════════════</div>
+        <div class="vic-sub">DEFENSE PROTOCOL COMPLETE · ALL 10 WAVES CLEARED</div>
+        <div class="go-stats" id="victory-stats"></div>
+        <div class="wc-head" id="victory-final">FINAL SCORE: 0</div>
+        <div class="sub" id="victory-continue">▸ SYSTEM SHUTDOWN INITIATED...</div>
+      </div>
+    </section>
+
+    <section id="screen-secret" class="screen hidden">
+      <div class="secret-term" id="secret-text"></div>
+    </section>
+
+    <section id="screen-achievement" class="screen hidden">
+      <div class="ach-pop" id="ach-pop">
+        <div class="ach-head">▲ ACHIEVEMENT UNLOCKED</div>
+        <div class="ach-name" id="ach-name"></div>
+        <div class="ach-desc" id="ach-desc"></div>
+      </div>
+    </section>
+  </div>
+
+  <div id="fx-layer"></div>
+</div>
+
+<!-- Classic scripts, dependency order; global namespace window.TD2 -->
+<script src="js/core/util.js"></script>
+<script src="js/core/events.js"></script>
+<script src="js/core/config.js"></script>
+<script src="js/core/save.js"></script>
+<script src="js/math/engine.js"></script>
+<script src="js/systems/audio.js"></script>
+<script src="js/systems/fx.js"></script>
+<script src="js/entities/spider.js"></script>
+<script src="js/entities/boss.js"></script>
+<script src="js/entities/cannon.js"></script>
+<script src="js/systems/waves.js"></script>
+<script src="js/ui/hud.js"></script>
+<script src="js/ui/screens.js"></script>
+<script src="js/ui/tutorial.js"></script>
+<script src="js/core/game.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

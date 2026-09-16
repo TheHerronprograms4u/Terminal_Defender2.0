@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <title>TERMINAL DEFENDER 2.0</title>
 <style>/* inline critical: hide body flash before css loads */
@@ -40,8 +40,11 @@ html,body{background:#02060a;margin:0;height:100%;overflow:hidden}
       </div>
 
       <div class="hud-item hud-status-min" id="hud-status-box">
-        <span class="hud-tag">PROTOCOL</span>
-        <span id="hud-status" class="status-indicator"><i class="status-pulse"></i><span id="hud-status-text">SYSTEM NOMINAL</span></span>
+        <button id="btn-pause-mobile" class="btn-icon-pause" title="Pause Game" aria-label="Pause">⏸</button>
+        <div class="status-wrap">
+          <span class="hud-tag">PROTOCOL</span>
+          <span id="hud-status" class="status-indicator"><i class="status-pulse"></i><span id="hud-status-text">SYSTEM NOMINAL</span></span>
+        </div>
       </div>
     </header>
 
@@ -83,10 +86,10 @@ html,body{background:#02060a;margin:0;height:100%;overflow:hidden}
     </footer>
 
     <div id="numpad" class="hidden">
-      <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button data-k="BS" class="np-fn">⌫</button>
-      <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button><button data-k="C" class="np-fn">AC</button>
-      <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="EN" class="np-fire">↵</button>
-      <button data-k="0" class="np-zero">0</button><button data-k="TAB" class="np-fn np-tab">TAB</button>
+      <button data-k="7">7</button><button data-k="8">8</button><button data-k="9">9</button><button data-k="BS" class="np-fn" title="Backspace">⌫</button>
+      <button data-k="4">4</button><button data-k="5">5</button><button data-k="6">6</button><button data-k="C" class="np-fn" title="Clear">AC</button>
+      <button data-k="1">1</button><button data-k="2">2</button><button data-k="3">3</button><button data-k="TAB" class="np-fn" title="Cycle Target">TAB</button>
+      <button data-k="0" class="np-zero">0</button><button data-k="EN" class="np-fire" title="Fire Laser">↵ FIRE</button>
     </div>
 
     <div id="toasts"></div>

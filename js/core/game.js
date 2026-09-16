@@ -40,7 +40,10 @@ TD2.game = (() => {
   const speedMul = () => diff().speedMul;
   // wave 11 is the fastest wave in the game; stage 2 pours on more pressure
   const waveSpeedRamp = () => S.wave === 11 ? 1.6 + (S.wave11Stage - 1) * 0.2 : 1 + (S.wave - 1) * 0.06;
-  const breachY = () => Math.min(H * TD2.config.LAYOUT.breach, TD2.cannonEnt ? TD2.cannonEnt.y - 52 : H * 0.68);
+  const breachY = () => {
+    if (TD2.cannonEnt) return TD2.cannonEnt.y - 52;
+    return H * (W < 768 && H > W ? 0.38 : TD2.config.LAYOUT.breach);
+  };
   const chroma = () => S.wave === 11 || (S.boss && S.boss.def.id === "overlord" && S.boss.phase >= 1);
 
   /* ============================================================
@@ -50,7 +53,19 @@ TD2.game = (() => {
   const layoutCannon = () => {
     TD2.cannonEnt.x = W / 2;
     // Calculate cannon.y so the terminal input console docks cleanly underneath
-    const targetY = Math.max(H * 0.60, Math.min(H * 0.74, H - 160));
+    const isPortraitMobile = W < 768 && H > W;
+    let targetY;
+    if (isPortraitMobile) {
+      // In portrait mobile: leave top ~40% for spider combat, dock cannon in the upper-mid
+      // so the horizontal terminal strip (~70px) and bottom numpad (~225px) fit cleanly
+      targetY = Math.round(Math.min(H * 0.44, H - 350));
+      targetY = Math.max(180, targetY);
+    } else if (H <= 520) {
+      // Landscape mobile
+      targetY = Math.round(H * 0.62);
+    } else {
+      targetY = Math.max(H * 0.60, Math.min(H * 0.74, H - 160));
+    }
     TD2.cannonEnt.y = targetY;
     document.documentElement.style.setProperty("--cannon-y", `${targetY}px`);
     document.documentElement.style.setProperty("--cannon-x", `${W / 2}px`);

@@ -28,23 +28,58 @@ TD2.hud = (() => {
       lowhp: $("#lowhp-overlay"),
       dmgFlash: $("#damage-flash"),
     };
-    // numpad (touch devices)
-    if ("ontouchstart" in window || navigator.maxTouchPoints > 0) toggleNumpad(true);
-    el.numpad.addEventListener("click", (e) => {
-      const b = e.target.closest("button");
-      if (!b) return;
-      const k = b.dataset.k;
+    // numpad (touch & mobile devices)
+    const handleKey = (k) => {
+      if (!k) return;
+      TD2.audio.unlock();
       TD2.audio.sfx("key");
       if (k === "BS") TD2.game.pressKey("Backspace");
       else if (k === "C") TD2.game.clearInput();
       else if (k === "EN") TD2.game.pressKey("Enter");
       else if (k === "TAB") TD2.game.cycleTarget();
       else TD2.game.pressKey(k);
+    };
+
+    // Use pointerdown for zero-latency instant input on touchscreens
+    el.numpad.addEventListener("pointerdown", (e) => {
+      const b = e.target.closest("button");
+      if (!b) return;
+      e.preventDefault();
+      handleKey(b.dataset.k);
     });
+
+    // Mobile pause button wiring
+    const pauseBtn = $("#btn-pause-mobile");
+    if (pauseBtn) {
+      pauseBtn.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        TD2.audio.unlock();
+        TD2.audio.sfx("click");
+        TD2.game.togglePause();
+      });
+      pauseBtn.addEventListener("click", (e) => e.preventDefault());
+    }
+
+    const checkMobile = () => (
+      ("ontouchstart" in window) ||
+      (navigator.maxTouchPoints > 0) ||
+      (window.innerWidth <= 768) ||
+      (window.matchMedia && window.matchMedia("(pointer: coarse)").matches)
+    );
+    if (checkMobile()) toggleNumpad(true);
+    window.addEventListener("resize", () => {
+      if (checkMobile()) toggleNumpad(true);
+    });
+
     dispScore = 0;
   };
 
-  const showHud = () => { show(el.root); };
+  const showHud = () => {
+    show(el.root);
+    if (("ontouchstart" in window) || (navigator.maxTouchPoints > 0) || (window.innerWidth <= 768)) {
+      toggleNumpad(true);
+    }
+  };
   const hideHud = () => { hide(el.root); };
 
   const toggleNumpad = (force) => {

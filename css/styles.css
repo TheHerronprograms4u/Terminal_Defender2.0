@@ -114,6 +114,33 @@ body {
   display: flex; flex-direction: column; align-items: flex-end;
   min-width: 140px; text-align: right;
 }
+.status-wrap {
+  display: flex; flex-direction: column; align-items: flex-end;
+}
+.btn-icon-pause {
+  display: none;
+  background: rgba(0, 229, 255, 0.1);
+  border: 1px solid rgba(0, 229, 255, 0.4);
+  color: var(--cyan);
+  width: 36px;
+  height: 36px;
+  border-radius: 4px;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: manipulation;
+  transition: all 0.15s ease;
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.12);
+}
+.btn-icon-pause:hover, .btn-icon-pause:active {
+  background: rgba(0, 255, 156, 0.25);
+  border-color: var(--green);
+  color: var(--green);
+  box-shadow: 0 0 14px rgba(0, 255, 156, 0.4);
+}
 .status-indicator {
   display: inline-flex; align-items: center; gap: 6px;
   font-size: 0.82rem; font-weight: 600; letter-spacing: 0.14em;
@@ -259,18 +286,34 @@ body {
 #numpad {
   position: absolute; right: 16px; bottom: 100px; z-index: 30; pointer-events: auto;
   display: grid; grid-template-columns: repeat(4, 56px); gap: 6px;
-  background: rgba(4,16,26,0.8); border: 1px solid rgba(0,229,255,0.25); padding: 10px;
+  background: linear-gradient(180deg, rgba(6, 20, 32, 0.95), rgba(2, 6, 12, 0.98));
+  border: 1px solid rgba(0,229,255,0.3); border-top: 2px solid var(--cyan);
+  padding: 10px; border-radius: 6px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.6), 0 0 16px rgba(0,229,255,0.1);
+  touch-action: manipulation; user-select: none; -webkit-user-select: none;
 }
 #numpad button {
-  font-family: var(--font); font-size: 1.1em; color: var(--green);
-  background: rgba(0,255,156,0.06); border: 1px solid rgba(0,255,156,0.35);
-  height: 46px; cursor: pointer; transition: background 0.1s;
+  font-family: var(--font); font-size: 1.15em; font-weight: 700; color: var(--cyan);
+  background: rgba(0,229,255,0.08); border: 1px solid rgba(0,229,255,0.3);
+  height: 48px; border-radius: 4px; cursor: pointer; transition: background 0.08s, transform 0.08s;
+  display: flex; align-items: center; justify-content: center; touch-action: manipulation;
 }
-#numpad button:active { background: rgba(0,255,156,0.3); }
-.np-fire { color: var(--red) !important; border-color: var(--red) !important; }
+#numpad button:active {
+  background: rgba(0,255,156,0.3); border-color: var(--green); color: var(--green); transform: scale(0.96);
+}
+.np-fire {
+  grid-column: span 2;
+  color: var(--red) !important; border-color: rgba(255,59,92,0.6) !important;
+  background: rgba(255,59,92,0.16) !important; font-size: 1.05em !important; letter-spacing: 0.08em;
+}
+.np-fire:active {
+  background: rgba(255,59,92,0.5) !important; box-shadow: 0 0 16px rgba(255,59,92,0.6);
+}
 .np-zero { grid-column: span 2; }
-.np-tab { grid-column: span 2; }
-.np-fn { color: var(--cyan) !important; }
+.np-fn {
+  color: var(--gold) !important; border-color: rgba(255,204,0,0.3) !important;
+  background: rgba(255,204,0,0.08) !important; font-size: 0.95em !important;
+}
 
 /* toasts / floating text are canvas-rendered; DOM toasts for wave events */
 #toasts { position: absolute; top: 150px; right: 18px; z-index: 21; }
@@ -546,3 +589,407 @@ body.reduced-fx #vignette, body.reduced-fx #lowhp-overlay { display: none; }
 body.reduced-fx * { animation-duration: 0.001s !important; }
 body.big-text { --ui-scale: 1.2; }
 body.no-shake #app { transform: none !important; }
+
+/* ============================================================
+   RESPONSIVE MOBILE & TOUCH OPTIMIZATIONS
+   ============================================================ */
+
+@media (max-width: 768px) {
+  /* HUD Top Bar - Single clean row */
+  #hud-top {
+    padding: 8px 12px 0;
+    align-items: center;
+  }
+  .hud-wave-min {
+    min-width: auto;
+  }
+  .hud-tag, .hud-sub {
+    display: none;
+  }
+  #wave-val {
+    font-size: 1.15rem;
+  }
+  .threat-meter {
+    width: 65px;
+    height: 3px;
+    margin: 3px 0 0;
+  }
+  .hud-score-minimal {
+    padding: 4px 14px 5px;
+    border-radius: 3px;
+  }
+  .score-badge {
+    font-size: 0.55rem;
+    letter-spacing: 0.2em;
+  }
+  .score-digits {
+    font-size: 1.35rem;
+    letter-spacing: 0.08em;
+  }
+  .score-telemetry {
+    display: none;
+  }
+  .hud-status-min {
+    min-width: auto;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+  }
+  .status-wrap {
+    display: none;
+  }
+  .btn-icon-pause {
+    display: flex;
+  }
+
+  /* Central Command Terminal - Dual horizontal strip docked below cannon */
+  .hud-terminal {
+    width: min(390px, calc(100vw - 20px));
+    top: calc(var(--cannon-y, 44%) + 24px);
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    padding: 6px 12px 8px;
+    box-shadow: 0 0 20px rgba(0, 229, 255, 0.2), inset 0 0 16px rgba(0, 229, 255, 0.05);
+    clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%, 0 10px);
+  }
+  .hud-terminal::before {
+    top: -5px;
+    width: 36px;
+    height: 5px;
+  }
+  #target-panel {
+    text-align: center;
+    padding: 0 4px;
+  }
+  #target-panel label {
+    font-size: 0.52rem;
+    letter-spacing: 0.2em;
+    margin-bottom: 1px;
+  }
+  #target-expr {
+    font-size: 1.25rem;
+    min-height: 1.1em;
+    white-space: nowrap;
+  }
+  #target-hint {
+    display: none;
+  }
+  .terminal-divider {
+    width: 1px;
+    height: 70%;
+    margin: 0 6px;
+    background: linear-gradient(180deg, transparent, rgba(0, 229, 255, 0.5), transparent);
+  }
+  .terminal-input-wrap {
+    text-align: center;
+    padding: 0 4px;
+  }
+  .terminal-input-wrap label {
+    font-size: 0.52rem;
+    letter-spacing: 0.2em;
+    margin-bottom: 1px;
+  }
+  #input-val {
+    min-width: 80px;
+    font-size: 1.35rem !important;
+    display: inline-block;
+  }
+  #input-mode {
+    display: none;
+  }
+
+  /* HUD Bottom - Docked cleanly above numpad */
+  #hud-bottom {
+    position: absolute;
+    bottom: 248px;
+    padding: 0 12px;
+    pointer-events: none;
+  }
+  #hud-bottom .hud-box {
+    padding: 4px 10px 5px;
+    min-width: auto;
+    clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  }
+  #hud-bottom .hud-box label {
+    font-size: 0.52rem;
+    letter-spacing: 0.18em;
+  }
+  .hp-bar {
+    width: min(130px, 34vw);
+    height: 11px;
+    margin: 2px 0;
+  }
+  #hp-val {
+    font-size: 0.72rem !important;
+  }
+  #hud-combo {
+    text-align: right;
+  }
+  #combo-val {
+    font-size: 1.05rem !important;
+  }
+  #combo-mult {
+    font-size: 0.75rem;
+  }
+
+  /* Virtual Cyber Numpad - Mobile thumb zone */
+  #numpad {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: max(10px, env(safe-area-inset-bottom, 10px));
+    width: min(400px, calc(100vw - 16px));
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    background: linear-gradient(180deg, rgba(4, 16, 26, 0.95), rgba(2, 6, 12, 0.98));
+    border: 1px solid rgba(0, 229, 255, 0.35);
+    border-top: 2px solid var(--cyan);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.6), 0 0 16px rgba(0, 229, 255, 0.12);
+    border-radius: 8px;
+    padding: 8px;
+    z-index: 30;
+    pointer-events: auto;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  #numpad button {
+    font-family: var(--font);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--cyan);
+    background: rgba(0, 229, 255, 0.08);
+    border: 1px solid rgba(0, 229, 255, 0.3);
+    border-radius: 5px;
+    height: 48px;
+    cursor: pointer;
+    transition: background 0.08s, transform 0.08s, border-color 0.08s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: manipulation;
+  }
+  #numpad button:active {
+    background: rgba(0, 255, 156, 0.3);
+    border-color: var(--green);
+    color: var(--green);
+    transform: scale(0.96);
+  }
+  .np-fire {
+    grid-column: span 2;
+    background: rgba(255, 59, 92, 0.18) !important;
+    border-color: rgba(255, 59, 92, 0.6) !important;
+    color: var(--red) !important;
+    font-size: 1.05rem !important;
+    letter-spacing: 0.1em;
+  }
+  .np-fire:active {
+    background: rgba(255, 59, 92, 0.5) !important;
+    box-shadow: 0 0 16px rgba(255, 59, 92, 0.6);
+  }
+  .np-fn {
+    color: var(--gold) !important;
+    background: rgba(255, 204, 0, 0.08) !important;
+    border-color: rgba(255, 204, 0, 0.3) !important;
+    font-size: 0.95rem !important;
+  }
+
+  /* Screens & Dialog Panels on Mobile */
+  .panel {
+    padding: 18px 16px;
+    min-width: min(360px, 94vw);
+    max-width: 96vw;
+    max-height: 88vh;
+    -webkit-overflow-scrolling: touch;
+    clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+  }
+  .panel.small {
+    min-width: min(340px, 92vw);
+    padding: 20px 16px;
+  }
+  .panel h2 {
+    font-size: 1.1rem;
+    margin-bottom: 12px;
+  }
+  .menu-wrap {
+    padding: 0 12px;
+  }
+  .title-line {
+    font-size: clamp(2rem, 9vw, 3.4rem);
+    letter-spacing: 0.12em;
+  }
+  .title-2 {
+    font-size: clamp(1.6rem, 7.5vw, 2.8rem);
+    letter-spacing: 0.12em;
+  }
+  .subtitle {
+    margin: 8px 0 20px;
+    letter-spacing: 0.35em;
+    font-size: 0.7rem;
+  }
+  .menu-nav {
+    width: min(290px, 86vw);
+    gap: 8px;
+  }
+  .menu-nav button {
+    padding: 9px 16px;
+    font-size: 0.88rem;
+  }
+  .menu-stats {
+    margin-top: 16px;
+    font-size: 0.65rem;
+    letter-spacing: 0.14em;
+  }
+  .menu-hint {
+    margin-top: 10px;
+    font-size: 0.65rem;
+  }
+
+  /* Pause Screen */
+  .pause-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .pause-grid button {
+    padding: 10px 18px;
+    font-size: 0.9rem;
+  }
+  .pause-hint {
+    margin-top: 12px;
+    font-size: 0.72rem;
+  }
+
+  /* Tutorial */
+  .tut-box {
+    max-width: min(360px, 92vw);
+    padding: 14px 16px;
+    font-size: 0.82rem;
+  }
+  .tut-title {
+    font-size: 1rem;
+  }
+  .tut-actions {
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+  }
+  .tut-keys-hint {
+    text-align: center;
+    font-size: 0.65rem;
+  }
+  .tut-btn-group {
+    justify-content: stretch;
+  }
+  .tut-btn {
+    flex: 1;
+    text-align: center;
+    padding: 8px 10px;
+  }
+  .tut-roster {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  /* Event Banner */
+  #event-banner {
+    top: 20%;
+    padding: 8px 20px;
+    width: min(320px, 86vw);
+  }
+  #event-banner span {
+    font-size: 1rem;
+    letter-spacing: 0.2em;
+  }
+
+  /* Boss Bar */
+  #bossbar {
+    top: 60px;
+    width: min(360px, 92vw);
+  }
+  .boss-name {
+    font-size: 0.95rem;
+    letter-spacing: 0.25em;
+  }
+
+  /* Settings rows */
+  .set-row {
+    gap: 8px;
+    padding: 8px 0;
+  }
+  .set-row label {
+    font-size: 0.82rem;
+  }
+  .set-val {
+    min-width: 60px;
+    font-size: 0.85rem;
+  }
+
+  /* Leaderboard & Achievements */
+  .lb-row {
+    grid-template-columns: 24px 1fr auto;
+    font-size: 0.82rem;
+  }
+  .ach-row {
+    padding: 6px 2px;
+    gap: 10px;
+  }
+  .ach-name {
+    font-size: 0.85rem;
+  }
+  .ach-desc {
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-height: 520px) {
+  #hud-top {
+    padding: 4px 12px 0;
+  }
+  .score-digits {
+    font-size: 1.25rem;
+  }
+  .status-wrap {
+    display: none;
+  }
+  .btn-icon-pause {
+    display: flex;
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+  #numpad {
+    left: auto;
+    right: 10px;
+    transform: none;
+    bottom: 8px;
+    width: 220px;
+    grid-template-columns: repeat(4, 46px);
+    gap: 4px;
+    padding: 6px;
+  }
+  #numpad button {
+    height: 34px;
+    font-size: 0.95rem;
+  }
+  #hud-bottom {
+    bottom: 8px;
+    left: 10px;
+    right: 240px;
+    padding: 0;
+  }
+  .hud-terminal {
+    top: calc(var(--cannon-y, 62%) + 20px);
+    padding: 4px 10px 6px;
+    height: 52px;
+  }
+  #target-expr, #input-val {
+    font-size: 1.15rem !important;
+  }
+  .panel {
+    max-height: 94vh;
+    padding: 12px 18px;
+  }
+}

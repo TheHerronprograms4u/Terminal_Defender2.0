@@ -18,21 +18,30 @@ html,body{background:#02060a;margin:0;height:100%;overflow:hidden}
   <!-- ================= IN-GAME HUD ================= -->
   <div id="hud" class="hidden" aria-live="off">
     <header id="hud-top">
-      <div class="hud-box" id="hud-wave">
-        <label>WAVE</label>
-        <span id="wave-val">--/--</span>
-        <div class="mini-bar" id="threat-bar"><i></i></div>
-        <label class="sub">THREAT LEVEL</label>
+      <div class="hud-item hud-wave-min" id="hud-wave">
+        <span class="hud-tag">WAVE</span>
+        <span id="wave-val" class="hud-val">01<span class="hud-dim">/10</span></span>
+        <div class="threat-meter" id="threat-bar"><i></i></div>
+        <span class="hud-sub">THREAT LEVEL</span>
       </div>
-      <div class="hud-box hud-center" id="hud-score">
-        <label>SCORE</label>
-        <span id="score-val">0</span>
-        <span class="sub"><span id="acc-val">ACC --%</span> · <span id="rt-val">RT --s</span></span>
+
+      <div class="hud-score-minimal" id="hud-score">
+        <div class="score-header">
+          <span class="score-badge">SCORE</span>
+          <span id="score-val" class="score-digits">0</span>
+        </div>
+        <div class="score-telemetry">
+          <span class="telem-chip" id="acc-val">ACC --%</span>
+          <span class="telem-sep">/</span>
+          <span class="telem-chip" id="rt-val">RT --s</span>
+          <span class="telem-sep">/</span>
+          <span class="telem-chip telem-best">BEST <span id="high-val">0</span></span>
+        </div>
       </div>
-      <div class="hud-box hud-right" id="hud-high">
-        <label>HIGH SCORE</label>
-        <span id="high-val">0</span>
-        <span class="sub" id="hud-status">SYSTEM NOMINAL</span>
+
+      <div class="hud-item hud-status-min" id="hud-status-box">
+        <span class="hud-tag">PROTOCOL</span>
+        <span id="hud-status" class="status-indicator"><i class="status-pulse"></i><span id="hud-status-text">SYSTEM NOMINAL</span></span>
       </div>
     </header>
 
@@ -43,25 +52,28 @@ html,body{background:#02060a;margin:0;height:100%;overflow:hidden}
       <div class="boss-deco">════════════════════════════</div>
     </div>
 
-    <div id="target-panel">
-      <label>TARGET</label>
-      <div id="target-expr">STANDBY</div>
-      <div id="target-hint" class="sub"></div>
-    </div>
-
     <div id="event-banner" class="hidden"><span id="event-banner-text"></span></div>
     <div id="event-timers"></div>
+
+    <div class="hud-box hud-center hud-terminal" id="hud-input">
+      <div id="target-panel">
+        <label>TARGET LOCK</label>
+        <div id="target-expr">STANDBY</div>
+        <div id="target-hint" class="sub"></div>
+      </div>
+      <div class="terminal-divider"></div>
+      <div class="terminal-input-wrap">
+        <label>TERMINAL INPUT</label>
+        <span id="input-val">&gt;_</span>
+        <span class="sub" id="input-mode">KEYS 0-9 · ENTER TO FIRE</span>
+      </div>
+    </div>
 
     <footer id="hud-bottom">
       <div class="hud-box" id="hud-hp">
         <label>HP</label>
         <div class="hp-bar" id="hp-bar"><i id="hp-fill"></i><em id="hp-ghost"></em></div>
         <span id="hp-val">100/100</span>
-      </div>
-      <div class="hud-box hud-center" id="hud-input">
-        <label>ANSWER</label>
-        <span id="input-val">&gt;_</span>
-        <span class="sub" id="input-mode">KEYS 0-9 · ENTER TO FIRE</span>
       </div>
       <div class="hud-box hud-right" id="hud-combo">
         <label>COMBO</label>
@@ -114,8 +126,6 @@ html,body{background:#02060a;margin:0;height:100%;overflow:hidden}
     <section id="screen-leaderboard" class="screen hidden"><div class="panel" id="leaderboard-panel"></div></section>
     <section id="screen-achievements" class="screen hidden"><div class="panel" id="achievements-panel"></div></section>
     <section id="screen-credits" class="screen hidden"><div class="panel" id="credits-panel"></div></section>
-
-    <section id="screen-tutorial" class="screen hidden"><div id="tutorial-layer"></div></section>
 
     <section id="screen-countdown" class="screen hidden"><div class="countdown" id="countdown-text"></div></section>
 
@@ -190,6 +200,7 @@ html,body{background:#02060a;margin:0;height:100%;overflow:hidden}
     </section>
   </div>
 
+  <div id="tutorial-layer" class="hidden"></div>
   <div id="fx-layer"></div>
 </div>
 

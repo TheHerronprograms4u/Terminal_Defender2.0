@@ -54,6 +54,22 @@ TD2.cannon = (() => {
     const a = cn.angle;
 
     ctx.save();
+    // mounting pylon struts connecting downward to the terminal console
+    ctx.strokeStyle = "rgba(0,229,255,0.45)";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.moveTo(bx - 36, by + 18); ctx.lineTo(bx - 56, by + 36); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(bx + 36, by + 18); ctx.lineTo(bx + 56, by + 36); ctx.stroke();
+    const condCol = cn.wrongT > 0 ? "rgba(255,157,59,0.7)" : (cn.bossMode ? "rgba(255,59,92,0.7)" : "rgba(0,255,156,0.7)");
+    ctx.strokeStyle = condCol;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(bx - 14, by + 22); ctx.lineTo(bx - 14, by + 36); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(bx + 14, by + 22); ctx.lineTo(bx + 14, by + 36); ctx.stroke();
+    // pulsing data stream into console
+    const pulseY = by + 22 + ((cn.coreT * 3) % 1) * 14;
+    ctx.fillStyle = condCol;
+    ctx.beginPath(); ctx.arc(bx - 14, pulseY, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(bx + 14, pulseY, 2, 0, Math.PI * 2); ctx.fill();
+
     // base platform
     ctx.strokeStyle = C.cyan; ctx.lineWidth = 2;
     ctx.fillStyle = "#06121c";
@@ -61,6 +77,11 @@ TD2.cannon = (() => {
     ctx.globalAlpha = 0.5;
     ctx.beginPath(); ctx.ellipse(bx, by + 16, 30, 7, 0, 0, Math.PI * 2); ctx.stroke();
     ctx.globalAlpha = 1;
+
+    // docking flange plate connecting base to terminal console
+    ctx.strokeStyle = "rgba(0,229,255,0.6)";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(bx - 60, by + 34, 120, 2);
 
     // rotating turret group
     ctx.translate(bx, by + bob);

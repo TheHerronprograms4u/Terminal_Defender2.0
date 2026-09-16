@@ -94,35 +94,161 @@ TD2.spider = (() => {
   /* ---------- drawing ---------- */
   const drawLegs = (ctx, sp, x, y, scale = 1, legLift = 0) => {
     const n = sp.def.legs, L = sp.def.legLen * scale;
+    const numLegs = Math.floor(n / 2);
     ctx.strokeStyle = sp.color;
-    ctx.lineWidth = Math.max(1.2, 2.4 * scale);
     ctx.lineCap = "round";
-    ctx.globalAlpha *= 0.9;
+    ctx.lineJoin = "round";
+    ctx.globalAlpha *= 0.95;
+
+    // Segment lengths for realistic spider proportions:
+    // Femur (upper) is ~54% of total reach, Tibia (lower) is ~60% of total reach
+    const L1 = L * 0.54;
+    const L2 = L * 0.60;
+    const wobbleFactor = sp.def.wobble ?? 1.0;
+
     for (let side = -1; side <= 1; side += 2) {
-      for (let i = 0; i < n / 2; i++) {
-        // base angle: splayed outward and upward
-        const spread = (-140 + i * (100 / (n / 2 - 1))) * Math.PI / 180;
-        const gait = Math.sin(sp.walk * 6 + i * 1.7 + (side > 0 ? Math.PI : 0));
-        const a = spread + gait * 0.16 * sp.def.wobble;
-        const hipX = x + side * sp.size * 0.45 * scale;
-        const hipY = y + (i - n / 4) * 3 * scale;
-        const kneeX = hipX + Math.cos(a) * L * 0.55 * side;
-        const kneeY = hipY + Math.sin(a) * L * 0.55 - 4 * scale - legLift;
-        const footX = kneeX + Math.cos(a + 0.5 * side) * L * 0.5 * side;
-        const footY = kneeY + Math.sin(a + 0.5 * side) * L * 0.5 + gait * 3 - legLift * 0.5;
+      for (let i = 0; i < numLegs; i++) {
+        // u ranges from 0 (front leg) to 1 (rear leg)
+        const u = numLegs > 1 ? i / (numLegs - 1) : 0.5;
+
+        // Realistic arachnid leg splay angles relative to lateral axis:
+        // Front legs angle strongly forward (+Y direction of travel),
+        // middle legs reach outward/forward/back, rear legs angle backward (-Y)
+        const restAngle = (56 - u * 112) * (Math.PI / 180);
+
+        // Coxa / Hip attachment along the cephalothorax margin:
+        const hipX = x + side * (sp.size * 0.42 * scale);
+        const hipY = y + (u - 0.28) * (sp.size * 0.68 * scale);
+
+        // Base resting foot target:
+        const reach = L * 0.96;
+        const restFootX = hipX + side * Math.cos(restAngle) * reach;
+        const restFootY = hipY + Math.sin(restAngle) * reach;
+
+        // Alternating tetrapod gait (diagonal coordination pairs step in lockstep)
+        const legGroup = (i + (side > 0 ? 1 : 0)) % 2;
+        const phase = (sp.walk * 3.6) + (legGroup * Math.PI);
+        const cycle = Math.sin(phase);
+
+        let footOffsetX = 0;
+        let footOffsetY = 0;
+        let lift = 0;
+
+        if (sp.latched) {
+          // Latching attack at defense line: front legs strike rapidly, rear legs brace
+          if (i <= 1) {
+            const clawStrike = Math.sin(sp.clawT * 12 + i * 2.2 + (side > 0 ? 1 : 0));
+            footOffsetY = clawStrike * (sp.size * 0.45 * scale);
+            lift = Math.max(0, clawStrike);
+          } else {
+            footOffsetY = Math.sin(sp.clawT * 4 + i) * 1.5 * scale;
+            lift = 0;
+          }
+        } else {
+          // Natural crawl cycle:
+          // When cycle < 0: Stance phase (foot planted, travels backward relative to body)
+          // When cycle >= 0: Swing phase (foot lifted, steps forward into next foothold)
+          const strideAmp = sp.size * 0.32 * scale * wobbleFactor;
+          if (cycle < 0) {
+            // Stance phase: planted on ground, pushing body forward (+Y travel -> foot shifts -Y)
+            footOffsetY = cycle * strideAmp;
+            footOffsetX = -Math.abs(cycle) * (strideAmp * 0.18);
+            lift = 0;
+          } else {
+            // Swing phase: lifted in air, swinging forward (+Y)
+            footOffsetY = cycle * strideAmp;
+            footOffsetX = cycle * (strideAmp * 0.22);
+            lift = cycle; // 0..1 smooth sinusoidal lift
+          }
+        }
+
+        // Target foot position on the grid
+        let footX = restFootX + side * footOffsetX;
+        let footY = restFootY + footOffsetY;
+
+        // 2-Segment Inverse Kinematics (IK) for knee position:
+        const fdx = footX - hipX;
+        const fdy = footY - hipY;
+        let dist = Math.hypot(fdx, fdy);
+        const maxDist = (L1 + L2) * 0.98;
+        if (dist > maxDist) {
+          dist = maxDist;
+          footX = hipX + (fdx / (dist || 1)) * maxDist;
+          footY = hipY + (fdy / (dist || 1)) * maxDist;
+        }
+
+        // Distance from hip to perpendicular knee axis:
+        const a = (L1 * L1 - L2 * L2 + dist * dist) / (2 * (dist || 1));
+        let h = Math.sqrt(Math.max(0, L1 * L1 - a * a));
+
+        // When leg lifts in swing phase, knee flexes higher and outward
+        if (lift > 0) {
+          h += lift * (3.8 * scale);
+        }
+
+        // Normalized direction vector from hip to foot
+        const ux = fdx / (dist || 1);
+        const uy = fdy / (dist || 1);
+
+        // Perpendicular vector pointing OUTWARD away from the body
+        let nx = -uy;
+        let ny = ux;
+        if (nx * side < 0) {
+          nx = -nx;
+          ny = -ny;
+        }
+
+        // Calculate exact knee joint coordinates
+        const kneeX = hipX + ux * a + nx * h;
+        const kneeY = hipY + uy * a + ny * h - (lift * 3.5 * scale) - legLift;
+
+        // 1. Draw upper leg segment (femur / patella)
+        ctx.lineWidth = Math.max(1.4, 2.8 * scale);
         ctx.beginPath();
         ctx.moveTo(hipX, hipY);
         ctx.lineTo(kneeX, kneeY);
+        ctx.stroke();
+
+        // 2. Draw lower leg segment (tibia / metatarsus)
+        ctx.lineWidth = Math.max(1.0, 1.9 * scale);
+        ctx.beginPath();
+        ctx.moveTo(kneeX, kneeY);
         ctx.lineTo(footX, footY);
         ctx.stroke();
-        // foot claw
+
+        // 3. Draw cybernetic knee joint node
+        ctx.fillStyle = sp.color;
+        ctx.beginPath();
+        ctx.arc(kneeX, kneeY, Math.max(1.0, 1.6 * scale), 0, Math.PI * 2);
+        ctx.fill();
+
+        // 4. Draw articulated tarsus claw tip
+        const legAngle = Math.atan2(footY - kneeY, footX - kneeX);
+        const clawAngle = legAngle + side * 0.22;
+        const clawLen = 4.2 * scale;
+        const clawX = footX + Math.cos(clawAngle) * clawLen;
+        const clawY = footY + Math.sin(clawAngle) * clawLen;
+
+        ctx.lineWidth = Math.max(0.9, 1.4 * scale);
         ctx.beginPath();
         ctx.moveTo(footX, footY);
-        ctx.lineTo(footX + side * 3 * scale, footY + 2 * scale);
+        ctx.lineTo(clawX, clawY);
         ctx.stroke();
+
+        // 5. Tactile ground contact node (glowing footprint when firmly planted)
+        if (lift < 0.15 && !sp.latched) {
+          ctx.save();
+          const contactGlow = (1 - lift / 0.15) * 0.75;
+          ctx.globalAlpha *= contactGlow;
+          ctx.fillStyle = sp.color;
+          ctx.beginPath();
+          ctx.arc(clawX, clawY, Math.max(0.9, 1.3 * scale), 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
       }
     }
-    ctx.globalAlpha /= 0.9;
+    ctx.globalAlpha /= 0.95;
   };
 
   const drawBody = (ctx, sp, x, y, scale = 1) => {
@@ -132,21 +258,38 @@ TD2.spider = (() => {
     ctx.fillStyle = sp.def.core || "#06121c";
     ctx.strokeStyle = sp.color;
     ctx.lineWidth = 1.6;
-    // abdomen + head
-    ctx.beginPath(); ctx.ellipse(x, y + s * 0.35, s * 0.62, s * 0.72, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(x, y - s * 0.45, s * 0.42, s * 0.36, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+    // Movement direction is DOWNWARDS (+Y toward player cannon)
+    // Cephalothorax (head/chest) in front (+Y):
+    ctx.beginPath(); ctx.ellipse(x, y + s * 0.18, s * 0.48, s * 0.42, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+    // Abdomen (larger rear carapace) trailing behind (-Y):
+    ctx.beginPath(); ctx.ellipse(x, y - s * 0.38, s * 0.62, s * 0.68, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     ctx.shadowBlur = 0;
-    // eyes
-    ctx.fillStyle = sp.crit ? C.gold : C.white;
-    for (const ex of [-0.16, 0.16]) {
-      ctx.beginPath(); ctx.arc(x + ex * s, y - s * 0.52, Math.max(1.2, s * 0.06), 0, Math.PI * 2); ctx.fill();
+
+    // Fangs / Pedipalps (front mandibles pointing down):
+    ctx.strokeStyle = sp.color; ctx.lineWidth = 1.4;
+    for (const side of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(x + side * s * 0.14, y + s * 0.50);
+      ctx.lineTo(x + side * s * 0.22, y + s * 0.66);
+      ctx.lineTo(x + side * s * 0.08, y + s * 0.72);
+      ctx.stroke();
     }
+
+    // Glowing predator multi-eyes facing downwards at the defense line:
+    ctx.fillStyle = sp.crit ? C.gold : C.white;
+    for (const ex of [-0.18, -0.06, 0.06, 0.18]) {
+      const ey = Math.abs(ex) > 0.1 ? y + s * 0.44 : y + s * 0.50;
+      ctx.beginPath(); ctx.arc(x + ex * s, ey, Math.max(1.0, s * 0.055), 0, Math.PI * 2); ctx.fill();
+    }
+
     // armored plates
     if (sp.def.plate) {
       ctx.strokeStyle = C.white; ctx.globalAlpha = 0.55; ctx.lineWidth = 1;
       for (let i = -1; i <= 1; i++) {
         ctx.beginPath();
-        ctx.ellipse(x, y + s * 0.35 + i * s * 0.3, s * 0.5, s * 0.1, 0, 0, Math.PI * 2);
+        ctx.ellipse(x, y - s * 0.38 + i * s * 0.24, s * 0.48, s * 0.1, 0, 0, Math.PI * 2);
         ctx.stroke();
       }
       ctx.globalAlpha = 1;

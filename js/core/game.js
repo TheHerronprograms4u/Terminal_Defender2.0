@@ -40,7 +40,7 @@ TD2.game = (() => {
   const speedMul = () => diff().speedMul;
   // wave 11 is the fastest wave in the game; stage 2 pours on more pressure
   const waveSpeedRamp = () => S.wave === 11 ? 1.6 + (S.wave11Stage - 1) * 0.2 : 1 + (S.wave - 1) * 0.06;
-  const breachY = () => H * TD2.config.LAYOUT.breach;
+  const breachY = () => Math.min(H * TD2.config.LAYOUT.breach, TD2.cannonEnt ? TD2.cannonEnt.y - 52 : H * 0.68);
   const chroma = () => S.wave === 11 || (S.boss && S.boss.def.id === "overlord" && S.boss.phase >= 1);
 
   /* ============================================================
@@ -49,7 +49,11 @@ TD2.game = (() => {
   const view = () => ({ w: W, h: H });
   const layoutCannon = () => {
     TD2.cannonEnt.x = W / 2;
-    TD2.cannonEnt.y = H * TD2.config.LAYOUT.cannon;
+    // Calculate cannon.y so the terminal input console docks cleanly underneath
+    const targetY = Math.max(H * 0.60, Math.min(H * 0.74, H - 160));
+    TD2.cannonEnt.y = targetY;
+    document.documentElement.style.setProperty("--cannon-y", `${targetY}px`);
+    document.documentElement.style.setProperty("--cannon-x", `${W / 2}px`);
   };
   const resize = () => {
     dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -231,14 +235,30 @@ TD2.game = (() => {
     TD2.fx.burst(sp.x || sp.baseX * W, 0, { count: 8, color: [C.cyan, C.green], speed: 60, life: 0.4 });
   };
 
-  const spawnPracticeSpider = (expr) => {
+  const spawnPracticeSpider = (expr, laneX = 0.5, speed = 8) => {
     S.gameMode = "practice";
     S.spiders = [];
-    const sp = TD2.spider.create("basic", { laneX: 0.5, expr, time: S.time });
-    sp.speed = 8;                       // slow in tutorial
+    const sp = TD2.spider.create("basic", { laneX, expr, time: S.time });
+    sp.speed = speed;
     S.spiders = [sp];
     S.practice = sp;
-    S.state = "TUTORIAL";               // practice updates run in TUTORIAL state
+    S.target = sp;
+    S.state = "TUTORIAL";
+  };
+
+  const spawnPracticeMulti = (items) => {
+    S.gameMode = "practice";
+    S.spiders = [];
+    const created = items.map((it, idx) => {
+      const lane = it.laneX ?? (idx === 0 ? 0.35 : 0.65);
+      const sp = TD2.spider.create(it.type || "basic", { laneX: lane, expr: it.expr, time: S.time });
+      sp.speed = it.speed ?? 7;
+      return sp;
+    });
+    S.spiders = created;
+    S.practice = created[0];
+    S.target = created[0];
+    S.state = "TUTORIAL";
   };
 
   /* ============================================================
@@ -301,7 +321,7 @@ TD2.game = (() => {
         return;
       }
     }
-    if (S.state === "ACTIVE" || S.state === "BOSS" || (S.state === "TUTORIAL" && S.practice)) {
+    if (S.state === "ACTIVE" || S.state === "BOSS" || (S.state === "TUTORIAL" && (S.practice || S.spiders.length > 0))) {
       if (key === "Enter") submitAnswer();
       else if (key === "Backspace") S.input = S.input.slice(0, -1);
       else if (key === "Tab") cycleTarget();
@@ -425,9 +445,20 @@ TD2.game = (() => {
      KILLS
      ============================================================ */
   const killSpider = (sp) => {
-    if (sp.state === "dying") return;
-    sp.state = "dying"; sp.dieT = 0;
-    if (S.gameMode === "practice" && sp === S.practice) { S.practice = null; TD2.tutorial.notifySolved(); return; }
+    if (S.gameMode === "practice") {
+      const remaining = S.spiders.filter((s) => s !== sp && s.state === "alive");
+      const big = sp.def.size >= 27;
+      TD2.fx.burst(sp.x, sp.y, { count: big ? 30 : 18, color: [sp.color, C.white, sp.color], speed: 260 });
+      TD2.fx.glyphs(sp.x, sp.y, sp.fakeText ?? sp.expr.text, C.white);
+      if (remaining.length === 0) {
+        S.practice = null;
+        TD2.tutorial.notifySolved();
+      } else {
+        S.target = remaining[0];
+        S.practice = remaining[0];
+      }
+      return;
+    }
     S.kills++;
     TD2.save.bumpStats({ totalKills: 1 });
     unlockAch("first_blood");
@@ -625,9 +656,12 @@ TD2.game = (() => {
       }
     } else if (S.state === "BOSS_INTRO" && !S.paused) {
       updateBoss(dt);   // boss must fly in during its intro
-    } else if (S.state === "TUTORIAL" && S.practice && !S.paused) {
+    } else if (S.state === "TUTORIAL" && S.spiders.length > 0 && !S.paused) {
       const env = { breachY: breachY(), timeScale: 1, w: W, h: H, time: S.time, chroma: false };
-      TD2.spider.update(S.practice, dt, env);
+      for (const sp of S.spiders) {
+        const res = TD2.spider.update(sp, dt, env);
+        if (res === "breach") { sp.y = -sp.size * 2; sp.latched = false; }
+      }
     }
     updateTargets();
   };
@@ -1136,6 +1170,24 @@ TD2.game = (() => {
     layoutCannon();
     window.addEventListener("resize", () => { resize(); layoutCannon(); });
     window.addEventListener("keydown", onKey);
+    canvas.addEventListener("pointerdown", (e) => {
+      if (S.state !== "ACTIVE" && S.state !== "BOSS" && S.state !== "TUTORIAL") return;
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const alive = aliveSpiders();
+      for (const sp of alive) {
+        if (Math.hypot(sp.x - mx, sp.y - my) <= sp.size * 2.8) {
+          S.target = sp;
+          TD2.audio.sfx("key");
+          return;
+        }
+      }
+      if (S.boss && Math.hypot(S.boss.x * W - mx, S.boss.yF * H - my) <= S.boss.size * 2.4) {
+        S.target = S.boss;
+        TD2.audio.sfx("key");
+      }
+    });
     wireMenus();
     TD2.hud.init();
     TD2.screens.applyAccessibility();
@@ -1149,7 +1201,7 @@ TD2.game = (() => {
   };
 
   return {
-    init, startRun, startDeepRun, pressKey, clearInput, cycleTarget, spawnPracticeSpider,
+    init, startRun, startDeepRun, pressKey, clearInput, cycleTarget, spawnPracticeSpider, spawnPracticeMulti,
     view, toMenu, togglePause, restartWave,
     settingsBack: () => {
       if (S.settingsFrom === "pause") { TD2.screens.pause(); setState("PAUSE"); }

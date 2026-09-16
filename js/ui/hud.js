@@ -13,8 +13,9 @@ TD2.hud = (() => {
     el = {
       root: $("#hud"),
       wave: $("#wave-val"), threat: $("#threat-bar i"),
+      scoreBox: $("#hud-score"),
       score: $("#score-val"), acc: $("#acc-val"), rt: $("#rt-val"),
-      high: $("#high-val"), status: $("#hud-status"),
+      high: $("#high-val"), status: $("#hud-status"), statusText: $("#hud-status-text"),
       hpFill: $("#hp-fill"), hpGhost: $("#hp-ghost"), hpVal: $("#hp-val"), hpBar: $("#hp-bar"),
       input: $("#input-val"),
       combo: $("#combo-val"), comboMult: $("#combo-mult"),
@@ -60,9 +61,15 @@ TD2.hud = (() => {
   const update = (s) => {
     // score animation (ease toward target)
     if (dispScore !== s.score) {
-      dispScore += (s.score - dispScore) * 0.18;
+      const prev = dispScore;
+      dispScore += (s.score - dispScore) * 0.22;
       if (Math.abs(s.score - dispScore) < 1) dispScore = s.score;
       el.score.textContent = fmt(dispScore);
+      if (s.score > prev && el.scoreBox) {
+        el.scoreBox.classList.add("score-pulse");
+        clearTimeout(el.scoreBox._t);
+        el.scoreBox._t = setTimeout(() => el.scoreBox.classList.remove("score-pulse"), 250);
+      }
     }
     el.wave.textContent = s.waveText;
     el.threat.style.width = `${Math.round(s.threat * 100)}%`;
@@ -71,7 +78,8 @@ TD2.hud = (() => {
     el.rt.textContent = `RT ${s.rt}s`;
 
     // status line
-    el.status.textContent = s.status;
+    if (el.statusText) el.statusText.textContent = s.status;
+    else el.status.textContent = s.status;
     el.status.classList.toggle("danger", s.danger);
 
     // HP

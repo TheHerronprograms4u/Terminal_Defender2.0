@@ -129,9 +129,9 @@ TD2.config = (() => {
 
   /* ---------- battlefield layout (fractions of canvas height) ---------- */
   const LAYOUT = {
-    breach: 0.86,   // defense line — crossing it = HP loss
-    cannon: 0.93,   // cannon baseline
-    bossHover: 0.22,
+    breach: 0.70,   // defense line — crossing it = HP loss
+    cannon: 0.77,   // cannon baseline — sits clearly above the bottom terminal
+    bossHover: 0.20,
     spawnTop: -0.06,
   };
 

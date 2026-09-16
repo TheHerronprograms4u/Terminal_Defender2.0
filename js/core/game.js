@@ -445,6 +445,10 @@ TD2.game = (() => {
      KILLS
      ============================================================ */
   const killSpider = (sp) => {
+    sp.state = "dying";
+    sp.dieT = 0;
+    if (S.target === sp) S.target = null;
+
     if (S.gameMode === "practice") {
       const remaining = S.spiders.filter((s) => s !== sp && s.state === "alive");
       const big = sp.def.size >= 27;
@@ -488,7 +492,6 @@ TD2.game = (() => {
       }
       TD2.fx.floatText(sp.x, sp.y - 40, "SPLIT!", { color: C.violet });
     }
-    if (S.target === sp) S.target = null;
   };
 
   const killBoss = () => {
@@ -661,7 +664,9 @@ TD2.game = (() => {
       for (const sp of S.spiders) {
         const res = TD2.spider.update(sp, dt, env);
         if (res === "breach") { sp.y = -sp.size * 2; sp.latched = false; }
+        if (sp.state === "dying" && sp.dieT >= TD2.config.DEATH.dissolve) sp.dead = true;
       }
+      S.spiders = S.spiders.filter((s) => !s.dead);
     }
     updateTargets();
   };

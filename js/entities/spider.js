@@ -329,10 +329,11 @@ TD2.spider = (() => {
   const draw = (ctx, sp, env) => {
     const x = sp.x, y = sp.y;
     ctx.save();
-    ctx.globalAlpha = sp.alpha;
+    const dyingA = sp.state === "dying" ? clamp(1 - sp.dieT / DEATH.dissolve, 0, 1) : 1;
+    ctx.globalAlpha = sp.alpha * (sp.state === "dying" ? dyingA : 1);
 
-    // target highlight
-    if (sp.targeted) {
+    // target highlight (only while alive)
+    if (sp.targeted && sp.state === "alive") {
       ctx.strokeStyle = C.cyan; ctx.lineWidth = 1.5;
       ctx.globalAlpha = 0.5 + Math.sin(env.time * 6) * 0.3;
       ctx.beginPath(); ctx.arc(x, y, sp.size * 1.7, 0, Math.PI * 2); ctx.stroke();
@@ -341,28 +342,30 @@ TD2.spider = (() => {
       ctx.font = `700 10px monospace`; ctx.textAlign = "center";
       ctx.fillText("▼ LOCKED", x, y - sp.size * 2.1);
     }
-    if (sp.crit) {
+    if (sp.crit && sp.state === "alive") {
       ctx.strokeStyle = C.gold; ctx.setLineDash([4, 4]); ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.arc(x, y, sp.size * 1.9, env.time * 2, env.time * 2 + Math.PI * 1.5); ctx.stroke();
       ctx.setLineDash([]);
     }
 
-    const dyingA = sp.state === "dying" ? clamp(1 - sp.dieT / DEATH.dissolve, 0, 1) : 1;
     const flash = sp.hitFlash > 0 || (sp.state === "dying" && sp.dieT < DEATH.flash);
     if (flash) { ctx.shadowColor = "#ffffff"; ctx.shadowBlur = 22; }
 
     drawLegs(ctx, sp, x, y, 1, sp.latched ? Math.abs(Math.sin(sp.clawT * 10)) * 3 : 0);
     drawBody(ctx, sp, x, y, 1);
-    if (!sp.latched) drawExpr(ctx, sp, x, y - sp.size * 1.45, env);
-    else {
-      // latched: expression moves below body so the line stays visible
-      drawExpr(ctx, sp, x, y + sp.size * 1.6, env);
+    if (sp.state === "alive") {
+      if (!sp.latched) drawExpr(ctx, sp, x, y - sp.size * 1.45, env);
+      else {
+        // latched: expression moves below body so the line stays visible
+        drawExpr(ctx, sp, x, y + sp.size * 1.6, env);
+      }
     }
 
     if (sp.state === "dying") {
-      ctx.globalAlpha = dyingA * 0.6;
-      ctx.strokeStyle = C.white;
-      ctx.beginPath(); ctx.arc(x, y, sp.size * (1 + (1 - dyingA) * 1.6), 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = dyingA * 0.7;
+      ctx.strokeStyle = sp.color || C.white;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(x, y, sp.size * (1 + (1 - dyingA) * 1.8), 0, Math.PI * 2); ctx.stroke();
     }
     ctx.restore();
   };

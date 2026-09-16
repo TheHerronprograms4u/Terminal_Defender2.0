@@ -93,139 +93,137 @@ TD2.spider = (() => {
 
   /* ---------- drawing ---------- */
   const drawLegs = (ctx, sp, x, y, scale = 1, legLift = 0) => {
-    const n = sp.def.legs, L = sp.def.legLen * scale;
+    const n = sp.def.legs;
     const numLegs = Math.floor(n / 2);
     ctx.strokeStyle = sp.color;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.globalAlpha *= 0.95;
 
-    // Segment lengths for realistic spider proportions:
-    // Femur (upper) is ~54% of total reach, Tibia (lower) is ~60% of total reach
-    const L1 = L * 0.54;
-    const L2 = L * 0.60;
+    const s = sp.size * scale;
     const wobbleFactor = sp.def.wobble ?? 1.0;
+
+    // Rigid chitinous exoskeleton segment lengths: Femur (L1) and Tibia (L2)
+    const baseReach = Math.max(sp.def.legLen * scale * 1.32, s * 1.48);
+    const L1 = baseReach * 0.47; // Upper leg (femur)
+    const L2 = baseReach * 0.53; // Lower leg (tibia)
 
     for (let side = -1; side <= 1; side += 2) {
       for (let i = 0; i < numLegs; i++) {
-        // u ranges from 0 (front leg) to 1 (rear leg)
+        // u: 0 = front-most leg, 1 = rear-most leg
         const u = numLegs > 1 ? i / (numLegs - 1) : 0.5;
 
-        // Realistic arachnid leg splay angles relative to lateral axis:
-        // Front legs angle strongly forward (+Y direction of travel),
-        // middle legs reach outward/forward/back, rear legs angle backward (-Y)
-        const restAngle = (56 - u * 112) * (Math.PI / 180);
+        // 1. Coxa / Hip attachment points distributed along the cephalothorax lateral margin:
+        // Cephalothorax center is at y + s * 0.18. Hips span from y + 0.32s down to y - 0.08s.
+        const hipX = x + side * s * (0.40 + Math.sin(u * Math.PI) * 0.05);
+        const hipY = y + s * (0.32 - u * 0.40);
 
-        // Coxa / Hip attachment along the cephalothorax margin:
-        const hipX = x + side * (sp.size * 0.42 * scale);
-        const hipY = y + (u - 0.28) * (sp.size * 0.68 * scale);
+        // 2. Natural Arachnid Fan Geometry:
+        // Legs splay symmetrically from front (+48°) to rear (-48°)
+        const fanAngle = (48 - u * 96) * (Math.PI / 180);
+        const footSpan = s * (1.52 + Math.sin(u * Math.PI) * 0.18);
+        const restFootX = x + side * Math.cos(fanAngle) * footSpan;
+        const restFootY = y + s * 0.10 + Math.sin(fanAngle) * footSpan;
 
-        // Base resting foot target:
-        const reach = L * 0.96;
-        const restFootX = hipX + side * Math.cos(restAngle) * reach;
-        const restFootY = hipY + Math.sin(restAngle) * reach;
+        // 3. Outward knee pole vector (defines the apex of the arachnid chevron bend):
+        const kneeAngle = (34 - u * 68) * (Math.PI / 180);
+        const poleSpan = s * 1.62;
+        const poleX = x + side * Math.cos(kneeAngle) * poleSpan;
+        const poleY = y + s * 0.12 + Math.sin(kneeAngle) * poleSpan;
 
-        // Alternating tetrapod gait (diagonal coordination pairs step in lockstep)
+        // 4. Alternating tetrapod gait (diagonal coordination pairs step in lockstep)
         const legGroup = (i + (side > 0 ? 1 : 0)) % 2;
-        const phase = (sp.walk * 3.6) + (legGroup * Math.PI);
+        const phase = (sp.walk * 4.2) + (legGroup * Math.PI);
         const cycle = Math.sin(phase);
+        const isSwing = cycle > 0;
+        const lift = isSwing ? Math.sin(cycle * Math.PI) : 0;
 
-        let footOffsetX = 0;
-        let footOffsetY = 0;
-        let lift = 0;
+        let footShiftX = 0;
+        let footShiftY = 0;
 
         if (sp.latched) {
-          // Latching attack at defense line: front legs strike rapidly, rear legs brace
+          // Latching strike at defense barrier: front legs attack rapidly, rear legs anchor
           if (i <= 1) {
-            const clawStrike = Math.sin(sp.clawT * 12 + i * 2.2 + (side > 0 ? 1 : 0));
-            footOffsetY = clawStrike * (sp.size * 0.45 * scale);
-            lift = Math.max(0, clawStrike);
+            const strikePhase = sp.clawT * 15 + i * 2.2 + (side > 0 ? 1 : 0);
+            footShiftY = Math.sin(strikePhase) * (s * 0.38);
+            footShiftX = Math.cos(strikePhase) * (s * 0.12) * side;
           } else {
-            footOffsetY = Math.sin(sp.clawT * 4 + i) * 1.5 * scale;
-            lift = 0;
+            footShiftY = Math.sin(sp.clawT * 5 + i) * 1.5 * scale;
+            footShiftX = 0;
           }
         } else {
-          // Natural crawl cycle:
-          // When cycle < 0: Stance phase (foot planted, travels backward relative to body)
-          // When cycle >= 0: Swing phase (foot lifted, steps forward into next foothold)
-          const strideAmp = sp.size * 0.32 * scale * wobbleFactor;
-          if (cycle < 0) {
-            // Stance phase: planted on ground, pushing body forward (+Y travel -> foot shifts -Y)
-            footOffsetY = cycle * strideAmp;
-            footOffsetX = -Math.abs(cycle) * (strideAmp * 0.18);
-            lift = 0;
-          } else {
-            // Swing phase: lifted in air, swinging forward (+Y)
-            footOffsetY = cycle * strideAmp;
-            footOffsetX = cycle * (strideAmp * 0.22);
-            lift = cycle; // 0..1 smooth sinusoidal lift
+          // True arachnid walk cycle:
+          // Stance (cycle <= 0): Foot planted firmly on grid, travels backward relative to advancing body
+          // Swing (cycle > 0): Foot lifts off grid and steps forward to next foothold
+          const strideLen = s * 0.24 * wobbleFactor;
+          footShiftY = cycle * strideLen;
+          if (isSwing) {
+            footShiftX = Math.sin(cycle * Math.PI) * (strideLen * 0.20) * side;
           }
         }
 
-        // Target foot position on the grid
-        let footX = restFootX + side * footOffsetX;
-        let footY = restFootY + footOffsetY;
+        // Target foot position on grid
+        let footX = restFootX + footShiftX;
+        let footY = restFootY + footShiftY;
 
-        // 2-Segment Inverse Kinematics (IK) for knee position:
-        const fdx = footX - hipX;
-        const fdy = footY - hipY;
-        let dist = Math.hypot(fdx, fdy);
-        const maxDist = (L1 + L2) * 0.98;
+        // 5. Analytical 2-Bone Inverse Kinematics (IK) with Outward Pole Vector:
+        // Guarantees rigid femur (L1) & tibia (L2) lengths with zero rubber-banding or joint distortion
+        let dx = footX - hipX;
+        let dy = footY - hipY;
+        let dist = Math.hypot(dx, dy) || 0.001;
+        const maxDist = (L1 + L2) * 0.96;
         if (dist > maxDist) {
           dist = maxDist;
-          footX = hipX + (fdx / (dist || 1)) * maxDist;
-          footY = hipY + (fdy / (dist || 1)) * maxDist;
+          footX = hipX + (dx / dist) * maxDist;
+          footY = hipY + (dy / dist) * maxDist;
+          dx = footX - hipX;
+          dy = footY - hipY;
         }
 
-        // Distance from hip to perpendicular knee axis:
-        const a = (L1 * L1 - L2 * L2 + dist * dist) / (2 * (dist || 1));
-        let h = Math.sqrt(Math.max(0, L1 * L1 - a * a));
+        const ux = dx / dist;
+        const uy = dy / dist;
+        const a = (L1 * L1 - L2 * L2 + dist * dist) / (2 * dist);
+        const h = Math.sqrt(Math.max(0, L1 * L1 - a * a));
 
-        // When leg lifts in swing phase, knee flexes higher and outward
-        if (lift > 0) {
-          h += lift * (3.8 * scale);
-        }
+        // Perpendicular normals to the hip->foot line
+        const n1x = -uy, n1y = ux;
+        const n2x = uy, n2y = -ux;
 
-        // Normalized direction vector from hip to foot
-        const ux = fdx / (dist || 1);
-        const uy = fdy / (dist || 1);
+        // Choose the normal that points outward toward the Pole Vector
+        const pdx = poleX - hipX;
+        const pdy = poleY - hipY;
+        const dot1 = n1x * pdx + n1y * pdy;
+        const nx = dot1 >= 0 ? n1x : n2x;
+        const ny = dot1 >= 0 ? n1y : n2y;
 
-        // Perpendicular vector pointing OUTWARD away from the body
-        let nx = -uy;
-        let ny = ux;
-        if (nx * side < 0) {
-          nx = -nx;
-          ny = -ny;
-        }
-
-        // Calculate exact knee joint coordinates
+        // Exact knee joint position
         const kneeX = hipX + ux * a + nx * h;
-        const kneeY = hipY + uy * a + ny * h - (lift * 3.5 * scale) - legLift;
+        const kneeY = hipY + uy * a + ny * h - (lift * 2.8 * scale) - legLift;
 
-        // 1. Draw upper leg segment (femur / patella)
-        ctx.lineWidth = Math.max(1.4, 2.8 * scale);
+        // 1. Draw Femur (Upper Leg segment)
+        ctx.lineWidth = Math.max(1.5, 2.8 * scale);
         ctx.beginPath();
         ctx.moveTo(hipX, hipY);
         ctx.lineTo(kneeX, kneeY);
         ctx.stroke();
 
-        // 2. Draw lower leg segment (tibia / metatarsus)
-        ctx.lineWidth = Math.max(1.0, 1.9 * scale);
+        // 2. Draw Tibia (Lower Leg segment)
+        ctx.lineWidth = Math.max(1.1, 1.9 * scale);
         ctx.beginPath();
         ctx.moveTo(kneeX, kneeY);
         ctx.lineTo(footX, footY);
         ctx.stroke();
 
-        // 3. Draw cybernetic knee joint node
+        // 3. Cybernetic Knee Joint Pivot
         ctx.fillStyle = sp.color;
         ctx.beginPath();
-        ctx.arc(kneeX, kneeY, Math.max(1.0, 1.6 * scale), 0, Math.PI * 2);
+        ctx.arc(kneeX, kneeY, Math.max(1.1, 1.8 * scale), 0, Math.PI * 2);
         ctx.fill();
 
-        // 4. Draw articulated tarsus claw tip
-        const legAngle = Math.atan2(footY - kneeY, footX - kneeX);
-        const clawAngle = legAngle + side * 0.22;
-        const clawLen = 4.2 * scale;
+        // 4. Articulated Tarsus Claw
+        const footAngle = Math.atan2(footY - kneeY, footX - kneeX);
+        const clawAngle = footAngle + (side * (u < 0.5 ? -0.25 : 0.25));
+        const clawLen = Math.max(3.2, 4.8 * scale);
         const clawX = footX + Math.cos(clawAngle) * clawLen;
         const clawY = footY + Math.sin(clawAngle) * clawLen;
 
@@ -235,14 +233,14 @@ TD2.spider = (() => {
         ctx.lineTo(clawX, clawY);
         ctx.stroke();
 
-        // 5. Tactile ground contact node (glowing footprint when firmly planted)
+        // 5. Tactile ground contact footprint when planted
         if (lift < 0.15 && !sp.latched) {
           ctx.save();
-          const contactGlow = (1 - lift / 0.15) * 0.75;
-          ctx.globalAlpha *= contactGlow;
+          const contactAlpha = (1 - lift / 0.15) * 0.75;
+          ctx.globalAlpha *= contactAlpha;
           ctx.fillStyle = sp.color;
           ctx.beginPath();
-          ctx.arc(clawX, clawY, Math.max(0.9, 1.3 * scale), 0, Math.PI * 2);
+          ctx.arc(clawX, clawY, Math.max(1.0, 1.5 * scale), 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
         }

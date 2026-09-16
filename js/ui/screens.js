@@ -233,7 +233,7 @@ TD2.screens = (() => {
       <div class="credits-body">
         <b>TERMINAL DEFENDER 2.0</b><br>
         <span class="dim">MATHEMATICAL DEFENSE PROTOCOL</span><br><br>
-        DESIGN · CODE · PROCEDURAL ART ..... <b>FREEBUFF ENGINE COLLECTIVE</b><br>
+        DESIGN · CODE · PROCEDURAL ART ..... <b>Harron Noah A. Melgar</b><br>
         AUDIO SYNTHESIS .................... <b>WEBAUDIO OSCILLATOR BANK</b><br>
         MATHEMATICS ....................... <b>YOU, DEFENDING THE TERMINAL</b><br><br>
         <span class="dim">The mathematics is the weapon. Built with vanilla JS + Canvas,

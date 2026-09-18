@@ -41,12 +41,22 @@ TD2.hud = (() => {
     };
 
     // Use pointerdown for zero-latency instant input on touchscreens
-    el.numpad.addEventListener("pointerdown", (e) => {
-      const b = e.target.closest("button");
+    // Fallback to touchstart/mousedown for browsers without PointerEvent support
+    const press = (target, prevent) => {
+      const b = (target && target.closest) ? target.closest("button") : null;
       if (!b) return;
-      e.preventDefault();
+      if (prevent) prevent();
       handleKey(b.dataset.k);
-    });
+    };
+    if (window.PointerEvent) {
+      el.numpad.addEventListener("pointerdown", (e) => press(e.target, () => e.preventDefault()));
+    } else {
+      el.numpad.addEventListener("touchstart", (e) => {
+        const t = e.changedTouches[0];
+        press(t ? t.target : null, () => e.preventDefault());
+      }, { passive: false });
+      el.numpad.addEventListener("mousedown", (e) => press(e.target, () => e.preventDefault()));
+    }
 
     // Mobile pause button wiring
     const pauseBtn = $("#btn-pause-mobile");

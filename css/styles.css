@@ -332,10 +332,12 @@ body {
 #lowhp-overlay.on { opacity: 1; animation: pulse 1.1s ease infinite; }
 
 /* ---------- screens ---------- */
-#screens { position: absolute; inset: 0; z-index: 40; }
+/* click-through container: individual .screen sections re-enable pointer events */
+#screens { position: absolute; inset: 0; z-index: 40; pointer-events: none; }
 .screen {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   background: rgba(2,6,10,0.92); animation: fadeIn 0.35s ease; overflow: hidden;
+  pointer-events: auto;
 }
 .screen.ghost { background: rgba(2,6,10,0.5); }
 .panel {
@@ -465,8 +467,12 @@ button:disabled:hover { background: rgba(0,229,255,0.05); border-color: rgba(0,2
 .ach-name { font-size: 1.1em; margin: 4px 0 2px; }
 
 /* ---------- Tutorial System ---------- */
+/* click-through layer: only visible children (boxes/skip button) capture input */
 #tutorial-layer {
   position: absolute; inset: 0; z-index: 60;
+  pointer-events: none;
+}
+.tut-box, .tut-skip-btn, .tut-hint-banner, .tut-actions, .tut-btn {
   pointer-events: auto;
 }
 .tut-spotlight {

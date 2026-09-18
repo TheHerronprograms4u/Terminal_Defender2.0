@@ -162,7 +162,7 @@ TD2.game = (() => {
     setState("ACTIVE");
     TD2.hud.setBoss(null);
     TD2.cannon.setBossMode(TD2.cannonEnt, false);
-    if (S.wave === 10) TD2.save.bumpStats({ bestWave: Math.max(TD2.save.get().stats.bestWave, 10) });
+    if (S.wave === 10) TD2.save.recordBest({ bestWave: 10 });
     if (S.wave === 10) unlockAch("math_monster");
   };
 
@@ -592,10 +592,12 @@ TD2.game = (() => {
     const st = TD2.save.get().stats;
     S._newRecord = S.score > st.bestScore && S.score > 0;
     const acc = S.shots ? Math.round((S.hits / S.shots) * 100) : 100;
+    TD2.save.recordBest({
+      bestScore: S.score,
+      bestCombo: S.bestCombo,
+      bestWave: S.wave > 10 ? 10 : S.wave,
+    });
     TD2.save.bumpStats({
-      bestScore: Math.max(st.bestScore, S.score),
-      bestCombo: Math.max(st.bestCombo, S.bestCombo),
-      bestWave: Math.max(st.bestWave, S.wave > 10 ? 10 : S.wave),
       accSum: acc, accRuns: 1,
       rtSum: avgRtRaw(), rtCount: 1,
     });

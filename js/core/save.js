@@ -66,6 +66,38 @@ TD2.save = (() => {
     persist();
   };
 
+  /* Best-records use replace-on-max semantics (NOT bump/accumulate).
+     Passing a non-number keeps the current value — so the callers
+     below only ever raise these stats, never lower them. */
+  const recordBest = (map) => {
+    for (const [k, v] of Object.entries(map)) {
+      if (typeof v === "number") data.stats[k] = Math.max(data.stats[k] || 0, v);
+    }
+    persist();
+  };
+
+  /* One-time repair: older builds accidentally accumulated bestWave /
+     bestScore / bestCombo via bumpStats. Clamp them back to the true
+     records using the leaderboard (which always stored per-run values). */
+  const repairBestStats = () => {
+    const trueBest = data.leaderboard.reduce(
+      (acc, r) => ({
+        bestScore: Math.max(acc.bestScore, r.score || 0),
+        bestWave: Math.max(acc.bestWave, r.wave || 0),
+        bestCombo: Math.max(acc.bestCombo, r.combo || 0),
+      }),
+      { bestScore: 0, bestWave: 0, bestCombo: 0 }
+    );
+    let changed = false;
+    for (const k of ["bestScore", "bestWave", "bestCombo"]) {
+      if (typeof data.stats[k] === "number" && data.stats[k] > trueBest[k]) {
+        data.stats[k] = trueBest[k];
+        changed = true;
+      }
+    }
+    if (changed) persist();
+  };
+
   const unlockAch = (id) => {
     if (data.achievements.includes(id)) return "known";
     data.achievements.push(id);
@@ -77,5 +109,6 @@ TD2.save = (() => {
   const resetAll = () => { data = DEFAULTS(); persist(); };
 
   load();
-  return { get, update, getSetting, setSetting, pushScore, bumpStats, unlockAch, isUnlocked, resetAll };
+  repairBestStats();
+  return { get, update, getSetting, setSetting, pushScore, bumpStats, recordBest, unlockAch, isUnlocked, resetAll };
 })();
